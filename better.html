@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Cursor Trail with Search/URL Bar</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #000;
+    cursor: none;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+  }
+  #urlBar {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    gap: 5px;
+  }
+  #urlInput {
+    padding: 8px 12px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+    width: 300px;
+  }
+  #goButton {
+    padding: 8px 12px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    background-color: #0ff;
+    color: #000;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  #goButton:hover {
+    background-color: #0aa;
+  }
+</style>
+</head>
+<body>
+
+<!-- URL/Search Bar -->
+<div id="urlBar">
+  <input id="urlInput" type="text" placeholder="Type a URL or search query">
+  <button id="goButton">Go</button>
+</div>
+
+<canvas id="neonCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('neonCanvas');
+const ctx = canvas.getContext('2d');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+const particles = [];
+
+class Particle {
+  constructor(x, y, hue) {
+    this.x = x;
+    this.y = y;
+    this.prevX = x;
+    this.prevY = y;
+    this.size = Math.random() * 4 + 2;
+    this.speedX = Math.random() * 2 - 1;
+    this.speedY = Math.random() * 2 - 1;
+    this.hue = hue;
+    this.life = 100;
+    this.alpha = 1;
+  }
+
+  update() {
+    this.prevX = this.x;
+    this.prevY = this.y;
+    this.x += this.speedX + (mouse.x - this.x) * 0.05;
+    this.y += this.speedY + (mouse.y - this.y) * 0.05;
+    this.life -= 1;
+    this.alpha = this.life / 100;
+  }
+
+  draw() {
+    ctx.strokeStyle = `hsla(${this.hue}, 100%, 50%, ${this.alpha})`;
+    ctx.lineWidth = this.size;
+    ctx.beginPath();
+    ctx.moveTo(this.prevX, this.prevY);
+    ctx.lineTo(this.x, this.y);
+    ctx.stroke();
+  }
+}
+
+function addParticle() {
+  const hue = (Date.now() / 10) % 360;
+  particles.push(new Particle(mouse.x, mouse.y, hue));
+}
+
+function animate() {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  addParticle();
+
+  for (let i = 0; i < particles.length; i++) {
+    particles[i].update();
+    particles[i].draw();
+
+    if (particles[i].alpha <= 0.01) {
+      particles.splice(i, 1);
+      i--;
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+
+window.addEventListener('mousemove', (e) => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// URL/Search functionality
+const urlInput = document.getElementById('urlInput');
+const goButton = document.getElementById('goButton');
+
+function navigate() {
+  let query = urlInput.value.trim();
+  if (!query) return;
+
+  // Check if it looks like a URL
+  if (/^(https?:\/\/)/i.test(query)) {
+    window.location.href = query; // Full URL
+  } else if (/^[\w-]+(\.[\w-]+)+/.test(query)) {
+    window.location.href = 'https://' + query; // Add https if missing
+  } else {
+    // Treat as a search query
+    const searchURL = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+    window.location.href = searchURL;
+  }
+}
+
+goButton.addEventListener('click', navigate);
+urlInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') navigate();
+});
+</script>
+</body>
+</html>
